@@ -50,9 +50,9 @@ def load_all_infrastructure_data():
             if '응급의료기관코드명' in row:
                 val = str(row['응급의료기관코드명'])
                 if '이외' in val: return '일반병원'
-                elif '응급' in val: return '응급병원'
+                elif '응급' in val: return '대형병원'
             if '응급실운영여부(1/2)' in row:
-                if row['응급실운영여부(1/2)'] == 1: return '응급병원'
+                if row['응급실운영여부(1/2)'] == 1: return '대형병원'
             return '일반병원' 
 
         df_hospital['type'] = df_hospital.apply(classify_hospital, axis=1)
@@ -93,6 +93,8 @@ def load_all_infrastructure_data():
     try:
         df_subway = read_csv_safe("subway.csv")
         df_subway['type'] = '지하철역'
+        
+        # 컬럼명 처리 (name 우선)
         if 'name' in df_subway.columns:
             df_subway = df_subway.rename(columns={'name': 'infra_name'})
         elif '역사명' in df_subway.columns:
@@ -121,15 +123,14 @@ def load_all_infrastructure_data():
     except Exception as e:
         debug_info.append(f"❌ 대형마트 파일 오류: {e}")
 
-    # 8. [추가] 체육시설 데이터
+    # 8. 체육시설 데이터
     try:
         df_gym = read_csv_safe("gym.csv")
         # 컬럼명 변경: name -> infra_name, 위도 -> lat, 경도 -> lng
         df_gym = df_gym.rename(columns={'name': 'infra_name', '위도': 'lat', '경도': 'lng'})
+        df_gym['type'] = df_gym['type'].fillna('기타')
         
-        # type 컬럼이 있으므로 그대로 사용 (수영장, 생활체육관, 야구장 등)
         all_data.append(df_gym[['type', 'infra_name', 'lat', 'lng']])
-        
         debug_info.append(f"✅ 체육시설: {len(df_gym)}개 로드")
     except FileNotFoundError:
         debug_info.append("❌ 체육시설 파일 없음 (gym.csv)")
@@ -234,7 +235,7 @@ def create_folium_map(df_map, df_infra, selected_filters):
     colors = {
         '초등학교': 'blue', '중학교': 'green', '고등학교': 'orange',
         '문화시설': 'purple', '공원': 'darkgreen',
-        '응급병원': 'red', '일반병원': 'lightred',
+        '대형병원': 'red', '일반병원': 'lightred',
         '버스정류장': 'cadetblue', '지하철역': 'darkblue',
         '대형마트': 'pink', '백화점': 'beige',
         
@@ -252,7 +253,7 @@ def create_folium_map(df_map, df_infra, selected_filters):
     icons = {
         '초등학교': 'graduation-cap', '중학교': 'university', '고등학교': 'landmark',
         '문화시설': 'palette', '공원': 'tree',
-        '응급병원': 'ambulance', '일반병원': 'plus-square',
+        '대형병원': 'ambulance', '일반병원': 'plus-square',
         '버스정류장': 'bus', '지하철역': 'subway',
         '대형마트': 'shopping-cart', '백화점': 'gift',
         
@@ -337,16 +338,15 @@ def create_detailed_map(apt_data, df_details):
         attr=vworld_attr
     )
     
-    # 상세 지도용 색상 (CSS Color Name / Hex)
+    # 상세 지도용 색상 (Line용)
     line_colors = {
         '초등학교': 'blue', '중학교': 'green', '고등학교': 'orange',
         '문화시설': 'purple', '공원': 'darkgreen',
-        '응급병원': 'red', '일반병원': '#FF7F7F',
+        '대형병원': 'red', '일반병원': '#FF7F7F',
         '버스정류장': 'cadetblue', '지하철역': 'darkblue',
         '대형마트': '#FF1493', '백화점': '#DAA520',
-        # 체육시설
-        '수영장': '#ADD8E6', '생활체육관': '#90EE90', '축구장': '#006400',
-        '야구장': '#FFA500', '농구장': '#FFA500', '테니스장': '#ADFF2F', 
+        '수영장': '#4682B4', '생활체육관': '#2E8B57', '축구장': '#006400',
+        '야구장': '#FF8C00', '농구장': '#FF4500', '테니스장': '#32CD32', 
         '배드민턴장': '#5F9EA0', '골프연습장': '#008000', '기타': '#808080'
     }
     
@@ -354,10 +354,9 @@ def create_detailed_map(apt_data, df_details):
     marker_colors = {
         '초등학교': 'blue', '중학교': 'green', '고등학교': 'orange',
         '문화시설': 'purple', '공원': 'darkgreen',
-        '응급병원': 'red', '일반병원': 'lightred',
+        '대형병원': 'red', '일반병원': 'lightred',
         '버스정류장': 'cadetblue', '지하철역': 'darkblue',
         '대형마트': 'pink', '백화점': 'beige',
-        # 체육시설
         '수영장': 'lightblue', '생활체육관': 'lightgreen', '축구장': 'green',
         '야구장': 'orange', '농구장': 'orange', '테니스장': 'lightgreen', 
         '배드민턴장': 'cadetblue', '골프연습장': 'green', '기타': 'gray'
@@ -366,10 +365,9 @@ def create_detailed_map(apt_data, df_details):
     icons = {
         '초등학교': 'graduation-cap', '중학교': 'university', '고등학교': 'landmark',
         '문화시설': 'palette', '공원': 'tree',
-        '응급병원': 'ambulance', '일반병원': 'plus-square',
+        '대형병원': 'ambulance', '일반병원': 'plus-square',
         '버스정류장': 'bus', '지하철역': 'subway',
         '대형마트': 'shopping-cart', '백화점': 'gift',
-        # 체육시설
         '수영장': 'person-swimming', '생활체육관': 'dumbbell', 
         '축구장': 'futbol', '야구장': 'baseball-bat-ball', 
         '농구장': 'basketball', '테니스장': 'table-tennis-paddle-ball',
@@ -377,34 +375,31 @@ def create_detailed_map(apt_data, df_details):
         '기타': 'star'
     }
 
-    # Center Apt
+    # Center Apt (아파트 위치)
     folium.Marker(
         location=[center_lat, center_lng],
         popup=f"선택: {apt_data['자치구명']} {apt_data['건물명']}",
         icon=folium.Icon(color='black', icon='building', prefix='fa')
     ).add_to(m)
     
-    # Infra Items
+    # Infra Items (주변 인프라)
     for idx, item in df_details.iterrows():
         infra_type = item['인프라_유형']
-        
-        # 색상/아이콘 매핑 (없으면 기본값)
         m_color = marker_colors.get(infra_type, 'gray')
         l_color = line_colors.get(infra_type, 'gray')
         icon_name = icons.get(infra_type, 'star')
         
-        folium.Circle(
-            location=[item['lat'], item['lng']],
-            radius=item['거리(m)'],
-            color=l_color, fill=True, fill_opacity=0.1, weight=1
-        ).add_to(m)
+        # [삭제됨] 원(Circle) 그리기 부분 제거
+        # folium.Circle(...).add_to(m) 코드를 삭제했습니다.
         
+        # 마커(아이콘) 표시
         folium.Marker(
             location=[item['lat'], item['lng']],
             popup=f"{item['시설명']} ({item['거리(m)']}m)",
             icon=folium.Icon(color=m_color, icon=icon_name, prefix='fa')
         ).add_to(m)
         
+        # 선(PolyLine) 그리기 - 아파트와 시설 연결
         folium.PolyLine(
             locations=[(center_lat, center_lng), (item['lat'], item['lng'])],
             color=l_color, weight=2, opacity=0.7
@@ -428,7 +423,6 @@ def create_detailed_map(apt_data, df_details):
     m.get_root().html.add_child(folium.Element(info_html))
 
     return components.html(m.get_root().render(), height=740, scrolling=True)
-
 
 # ====================================================================
 # --- 7. Streamlit 애플리케이션 메인 함수 ---
@@ -519,7 +513,7 @@ def main():
         
         # 4-3. 병원
         st.markdown("#### 🏥 병원 시설")
-        if st.checkbox("응급병원", value=False): selected_filters['응급병원'] = st.slider("응급병원 반경 (m):", 100, max_radius, 1500, 50, key="s_er")
+        if st.checkbox("대형병원", value=False): selected_filters['대형병원'] = st.slider("대형병원 반경 (m):", 100, max_radius, 1500, 50, key="s_er")
         if st.checkbox("일반병원", value=False): selected_filters['일반병원'] = st.slider("일반병원 반경 (m):", 100, max_radius, 1000, 50, key="s_gen")
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -535,7 +529,7 @@ def main():
         if st.checkbox("백화점", value=False): selected_filters['백화점'] = st.slider("백화점 반경 (m):", 100, max_radius, 3000, 50, key="s_dept")
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # 4-6. [추가] 체육 시설
+        # 4-6. 체육 시설
         st.markdown("#### 🏃 체육 시설")
         if st.checkbox("수영장", value=False): selected_filters['수영장'] = st.slider("수영장 반경 (m):", 100, max_radius, 1500, 50, key="s_swim")
         if st.checkbox("생활체육관", value=False): selected_filters['생활체육관'] = st.slider("생활체육관 반경 (m):", 100, max_radius, 1500, 50, key="s_gym")
@@ -560,10 +554,34 @@ def main():
         st.warning("👈 **안내:** 왼쪽 사이드바에서 분석할 **인프라 종류를 하나 이상 체크**해 주세요.")
         return
 
-    filter_summary = ", ".join([f"{k} ({v}m)" for k, v in selected_filters.items()])
-    
     with st.container(border=True):
-        st.markdown(f"### 🔍 필터링 기준: {filter_summary}")
+        st.markdown("### 🔍 필터링 기준")
+        
+        icon_map_filter = {
+            '초등학교':'🎒', '중학교':'📚', '고등학교':'🏛️', 
+            '문화시설':'🎨', '공원':'🌳', '대형병원':'🚑', '일반병원':'🏥',
+            '버스정류장':'🚌', '지하철역':'🚇', '대형마트':'🛒', '백화점':'🛍️',
+            '수영장':'🏊', '생활체육관':'🏋️', '축구장':'⚽', '야구장':'⚾',
+            '농구장':'🏀', '테니스장':'🎾', '배드민턴장':'🏸', '골프연습장':'⛳',
+            '기타':'⭐'
+        }
+
+        tags_html = """
+<div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%; margin-bottom: 24px;">
+"""
+        
+        for key, radius in selected_filters.items():
+            icon = icon_map_filter.get(key, '📍')
+            tags_html += f"""
+<div style="display: inline-flex; align-items: center; background-color: #f0f2f6; border: 1px solid #d1d5db; border-radius: 20px; padding: 6px 12px; color: #31333F; font-size: 14px; font-weight: 500; white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+    <span style="margin-right: 6px; font-size: 16px;">{icon}</span>
+    {key} 
+    <span style="color: #666; font-size: 12px; margin-left: 6px; font-weight: 400;">{radius}m</span>
+</div>
+"""
+        tags_html += "</div>"
+        
+        st.markdown(tags_html, unsafe_allow_html=True)
     
     df_filtered = filter_apartments(df_apt, df_infra, selected_filters)
     
@@ -605,14 +623,13 @@ def main():
         
         with header_right_placeholder.container():
             with st.container(border=True):
-                st.markdown("#### 🏢 아파트 목록 (인프라 카운트 기준)")
+                st.markdown("#### 🏢 아파트 추천 목록")
         
         with body_col1:
             create_folium_map(df_map, df_infra, selected_filters)
             
         with table_container:
             st.markdown("##### 📋 아파트 상세 목록")
-            # '자치구명' 컬럼을 표의 맨 앞에 추가
             display_cols = ['자치구명', '건물명'] + [f'{k}_카운트' for k in selected_filters.keys()]
             rename_map = {f'{k}_카운트': k for k in selected_filters.keys()}
             
@@ -634,7 +651,6 @@ def main():
         }
         df_details = get_apartment_infrastructure_details(apt_data_for_detail, df_infra, selected_filters)
         
-        # 상세 목록에는 자치구명 제외
         detail_cols = ['인프라_유형', '시설명', '거리(m)']
 
         selected_apt_total_count = df_details.shape[0]
@@ -663,10 +679,9 @@ def main():
                     for j, key in enumerate(chunk):
                         with cols[j]:
                             count = infra_counts.get(key, 0)
-                            # 아이콘 매핑 확장
                             icon_map = {
                                 '초등학교':'🎒', '중학교':'📚', '고등학교':'🏛️', 
-                                '문화시설':'🎨', '공원':'🌳', '응급병원':'🚑', '일반병원':'🏥',
+                                '문화시설':'🎨', '공원':'🌳', '대형병원':'🚑', '일반병원':'🏥',
                                 '버스정류장':'🚌', '지하철역':'🚇', '대형마트':'🛒', '백화점':'🛍️',
                                 '수영장':'🏊', '생활체육관':'🏋️', '축구장':'⚽', '야구장':'⚾',
                                 '농구장':'🏀', '테니스장':'🎾', '배드민턴장':'🏸', '골프연습장':'⛳',
